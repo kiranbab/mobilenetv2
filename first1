@@ -1,0 +1,96 @@
+from keras.applications.mobilenetv2 import MobileNetV2
+from keras.layers import Dense, Input, Dropout
+from keras.models import Model
+from keras.utils import to_categorical
+from sklearn.utils import shuffle
+from keras.preprocessing.image import ImageDataGenerator
+
+
+
+
+# Load the fashion-mnist train data and test data
+x_train,y_train,x_test,y_test = split_data(train,label,70)
+# output
+#x_train_shape= (272, 224, 224) y_train_shape= (272,)
+#x_test_shape=(632, 224, 224) y_test_shape= (632,)
+        
+norm_x_train = x_train.astype('float32') / 255
+norm_x_test = x_test.astype('float32') / 255
+        
+        
+encoded_y_train = to_categorical(y_train, num_classes=151, dtype='float32')
+encoded_y_test = to_categorical(y_test, num_classes=151, dtype='float32')
+
+
+def load_data_generator(x, y, batch_size=64):
+    num_samples = x.shape[0]
+    while 1:  # Loop forever so the generator never terminates
+        try:
+            shuffle(x)
+            for i in range(0, num_samples, batch_size):
+                x_data = [preprocess_image(im) for im in x[i:i+batch_size]]
+                y_data = y[i:i + batch_size]
+            
+                # convert to numpy array since this what keras required
+                yield shuffle(np.array(x_data), np.array(y_data))
+        except Exception as err:
+            print(err)
+            
+            
+            
+            
+
+
+def build_model( ):
+    input_tensor = Input(shape=(224, 224, 3))
+    base_model = MobileNetV2(
+        include_top=False,
+        weights='imagenet',
+        input_tensor=input_tensor,
+        input_shape=(224, 224, 3),
+        pooling='avg')
+
+    for layer in base_model.layers:
+        layer.trainable = True  # trainable has to be false in order to freeze the layers
+        
+    op = Dense(256, activation='relu')(base_model.output)
+    op = Dropout(.25)(op)
+    
+    ##
+    # softmax: calculates a probability for every possible class.
+    #
+    # activation='softmax': return the highest probability;
+    # for example, if 'Coat' is the highest probability then the result would be 
+    # something like [0,0,0,0,1,0,0,0,0,0] with 1 in index 5 indicate 'Coat' in our case.
+    ##
+    output_tensor = Dense(151, activation='softmax')(op)
+
+    model = Model(inputs=input_tensor, outputs=output_tensor)
+
+
+    return model
+
+
+for layer in base_model.layers:
+# trainable has to be false in order to freeze the layers
+  layer.trainable = False # or True
+    
+from keras.optimizers import Adam
+model = build_model()
+model.compile(optimizer=Adam(),
+              loss='categorical_crossentropy',
+              metrics=['categorical_accuracy'])
+
+
+train_generator = load_data_generator(norm_x_train, encoded_y_train, batch_size=64)
+model.fit_generator(
+    generator=train_generator,
+    steps_per_epoch=900,
+    verbose=1,
+    epochs=20)
+
+
+test_generator = load_data_generator(norm_x_test, encoded_y_test, batch_size=64)
+model.evaluate_generator(generator=test_generator,
+                         steps=900,
+                         verbose=1)
