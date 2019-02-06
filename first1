@@ -29,7 +29,7 @@ import cv2
 img_rows, img_cols = 224, 224 
 
 # Re-loads the MobileNet model without the top or FC layers
-MobileNet = MobileNet(weights = 'imagenet', include_top = False, input_shape = (img_rows, img_cols, 3))
+model = MobileNet(weights = 'imagenet', include_top = False, input_shape = (img_rows, img_cols, 3))
 
 # Here we freeze the last 4 layers 
 # Layers are set to trainable as True by default
@@ -41,7 +41,7 @@ for layer in model.layers:
     print(layer,layer.trainable)
     
     
-for (i,layer) in enumerate(MobileNet.layers):
+for (i,layer) in enumerate(model.layers):
     print(str(i) + " "+ layer.__class__.__name__, layer.trainable)
     
 
@@ -59,9 +59,9 @@ def addTopModelMobileNet(bottom_model, num_classes):
 
 num_classes = 151
 
-FC_Head = addTopModelMobileNet(MobileNet, num_classes)
+FC_Head = addTopModelMobileNet(model, num_classes)
 
-model = Model(inputs = MobileNet.input, outputs = FC_Head)
+model = Model(inputs = model.input, outputs = FC_Head)
 
 print(model.summary())
 
